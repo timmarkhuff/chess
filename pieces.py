@@ -22,6 +22,11 @@ class Piece:
         First checks some basic validation conditions that apply
         to all pieces, then check the piece-specific conditions.
         """
+        # check board boundaries
+        if not 0 <= row <= self.game.BOARD_SIZE and \
+                0 <= col <= self.game.BOARD_SIZE:
+            return False, None
+
         # disallow movement to the same square
         if self.row == row and self.col == col:
             return False, None
@@ -31,11 +36,6 @@ class Piece:
         if piece_at_destination and piece_at_destination.player == self.player:
             return False, None
         
-        # check board boundaries
-        if not 0 <= row <= self.game.BOARD_SIZE and \
-                0 <= col <= self.game.BOARD_SIZE:
-            return False, None
-
         return self.check_rules(row, col)
 
     def validate_diagonal(self, row: int, col: int) -> tuple:
