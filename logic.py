@@ -1,4 +1,3 @@
-from typing import Tuple
 from pieces import Pawn, Rook, Bishop, King, Knight, Queen
 
 # for colors
@@ -19,14 +18,22 @@ class Game:
         self.board = [[None for _ in range(size)] for _ in range(size)]
 
         self.players = [
-            Player('Player 0', 0, 1),
-            Player('Player 1', 1, -1),
+            Player('Red', 0, 1),
+            Player('Green', 1, -1),
         ]
 
-        self.current_player = self.players[0]
+        self.current_player = self.players[1]
         self.winner = None
+        self.current_turn = 1
 
-        self.pieces = []    
+        self.pieces = [] 
+
+        # add the kings
+        player = self.players[0]
+        player.king = King(self, player, 0, 4)
+        player = self.players[1]
+        player.king = King(self, player, 7, 4)
+        self.update_board_list()
 
     def add_pieces_to_board(self):
         main_row = 0
@@ -49,9 +56,8 @@ class Game:
             Bishop(self, player, main_row, 2)
             Bishop(self, player, main_row, 5)
 
-            # Create King and Queen
+            # Create Queen
             Queen(self, player, main_row, 3)
-            player.king = King(self, player, main_row, 4)
 
             main_row = 7
             pawn_row = 6 
@@ -59,6 +65,7 @@ class Game:
         self.update_board_list()
         
     def toggle_current_player(self):
+        self.current_turn += 1
         if self.current_player == self.players[0]:
             self.current_player = self.players[1]
         else:
@@ -191,7 +198,8 @@ class Game:
             response = 'Move is invalid.'
             return False, response
         elif len(potential_pieces) > 1:
-            response = 'Multiple matching pieces found.'
+            response = "Multiple matching pieces found.\n"\
+            "Please be more specific by including the rank or file of the attacking piece."
             return False, response
         else:
             found_piece = potential_pieces[0][0]
@@ -211,13 +219,16 @@ class Game:
         piece.col = None
 
     def move_selected_piece(self, row, col) -> None:
-        self.selected_piece.row = row
-        self.selected_piece.col = col
-        self.selected_piece.has_moved = True
+        self.move_piece(self.selected_piece, row, col)
         self.selected_piece = None
         self.update_board_list()
         self.toggle_current_player()
         self.check_winner()
+
+    def move_piece(self, piece, row, col) -> None:
+        piece.row = row
+        piece.col = col
+        piece.has_moved = True
 
     def check_winner(self):
         if not self.players[0].king.active:
@@ -228,47 +239,35 @@ class Game:
             self.winner = None
         return self.winner
 
-    def check_for_valid_movesWIP(self, piece):
-        # check if there are any valid moves for this piece         
-        for row in range(self.BOARD_SIZE):
-            for col in range(self.BOARD_SIZE):
-                is_valid, _ = piece.validate_move(row, col)
-                if is_valid:
-                    break
-            if is_valid:
-                break
-        else:
-            response = f'No valid moves for {piece.name} at ({piece.col},{piece.row}).'
-            return None, response
-              
-    def evaluate_moveWIP(self, row: int, col: int) -> bool:
+    def is_under_attack(self, row: int, col: int) -> bool:
         """
-        Attempt to move the selected piece based on the rules of
-        that piece. Capture pieces as necessary. 
+        Test if a given square (defined by row and col) is under
+        attack by pieces.
         """
-        # Don't allow any further selections if the game is over
-        if self.winner is not None:
-            return None, 'The game is over.'
-
-        is_valid, piece_to_capture = self.selected_piece.validate_move(row, col)
+        # If there is a piece at the coordinate, is_under_attack is not
+        # applicable. Return False. 
+        piece_at_coord = self.get_piece_at_coordinate(row, col)
+        if piece_at_coord:
+            return False
         
-        # capture piece
-        if piece_to_capture is not None:
-            self.selected_piece.capture_piece(piece_to_capture)
+        # create a virtual pawn to test if the position is under attack
+        virtual_pawn = Pawn(self, self.current_player, row, col)
 
-        if is_valid:
-            self.selected_piece.row = row
-            self.selected_piece.col = col
-            response = f'{self.selected_piece.name} moved to ({col},{row})'
-            self.selected_piece = None
-            self.update_board_list()
-            self.toggle_current_player()
-            self.check_winner()
-            return True, response
-        else:
-            response = f'{self.selected_piece.name} at ({self.selected_piece.col},{self.selected_piece.row}) '\
-                    f'to ({col},{row}) is not a valid move.'
-            return False, response
+        other_players_pieces = [piece for piece in self.pieces 
+                                if piece.player != self.current_player and piece.active]
+        
+        ret = False
+        for piece in other_players_pieces:
+            if piece.validate_move(row, col):
+                ret = True
+                break
+
+        del virtual_pawn
+        return ret
+
+    def if_check(self) -> bool:
+        pass
+
 
 class Player:
     def __init__(self, name: str, 
@@ -277,3 +276,4 @@ class Player:
         self.name = name
         self.id = id
         self.movement_direction = movement_direction
+        self.captured_pieces = []
