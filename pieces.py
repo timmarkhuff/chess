@@ -1,9 +1,9 @@
 class Piece:
     def __init__(self, 
-                    game, 
-                    player, 
-                    row: int, 
-                    col: int) -> None:
+                game, 
+                player, 
+                row: int, 
+                col: int) -> None:
         self.game = game
         self.player = player
         self.row = row
